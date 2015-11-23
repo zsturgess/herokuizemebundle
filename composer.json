@@ -1,0 +1,20 @@
+{
+    "name": "zsturgess/herokuize-me-bundle",
+    "type": "symfony-bundle",
+    "require": {
+        "php": ">=5.4.0",
+        "symfony/filesystem": "^2.7",
+        "symfony/process": "^2.7"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Zac Sturgess",
+            "email": "zac.sturgess@wearetwogether.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": { "ZacSturgess\\HerokuizeMeBundle\\": "" }
+    },
+    "minimum-stability": "stable"
+}
