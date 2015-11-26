@@ -7,7 +7,7 @@ use Symfony\Component\Process\ExecutableFinder;
 /**
  * DependanciesActor
  */
-class DependanciesActor extends BaseActor
+class DependenciesActor extends BaseActor
 {
     private $composerPath = null;
     

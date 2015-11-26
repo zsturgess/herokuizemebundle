@@ -36,7 +36,7 @@ class HerokuizeMeCommand extends Command
         
         $this->actors = [
             new Actor\CodebaseActor($baseDir),
-            new Actor\DependanciesActor($baseDir),
+            new Actor\DependenciesActor($baseDir),
             new Actor\ConfigActor($baseDir),
             new Actor\BackingServicesActor($baseDir),
             new Actor\BuildReleaseRunActor($baseDir),
