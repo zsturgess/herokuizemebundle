@@ -8,13 +8,26 @@ namespace ZacSturgess\HerokuizeMeBundle\Actor;
 class BuildReleaseRunActor extends BaseActor
 {
     public function run()
-    {   
-        // @todo: Check for the existance of a valid procfile
+    {
+        if (!$this->fs->exists($this->baseDir . 'Procfile')) {
+            return '<error>No Procfile exists at the root of the Symfony installation.</error> When Heroku tries to run your app, the root directory instead of the web/ folder will be served.';
+        }
+        
+        if (strpos('web:', 'web:') === false) {
+            return '<error>Your Procfile does not declare a "web" process type.</error> When Heroku tries to run your app, the root directory instead of the web/ folder will be served.';
+        }
+        
+        return true;
     }
     
     public function fix()
     {
-        // @todo: Copy a procfile into the root dir
+        // Copy a procfile into the root dir
+        file_put_contents(
+            $this->baseDir . 'Procfile',
+            file_get_contents($this->templateDir . 'Procfile'),
+            FILE_APPEND
+        );
     }
     
     public function getSuccessMessage()
