@@ -2,25 +2,14 @@
 
 namespace ZacSturgess\HerokuizeMeBundle\Actor;
 
-use Symfony\Component\Filesystem\Filesystem;
-use Symfony\Component\Process\Process;
-
 /**
  * CodebaseActor
  */
-class CodebaseActor implements ActorInterface
-{
-    private $baseDir;
-    
-    public function __construct() {
-        $this->baseDir = __DIR__ . '/../../../../';
-    }
-    
+class CodebaseActor extends BaseActor
+{   
     public function run()
-    {
-        $fs = new Filesystem;
-        
-        if (!$fs->exists([
+    {   
+        if (!$this->fs->exists([
             $this->baseDir . '.git',
             $this->baseDir . '.gitignore'
         ])) {
@@ -30,32 +19,27 @@ class CodebaseActor implements ActorInterface
         }
     }
     
-    public function fix($force = false)
+    public function fix()
     {
-        $fs = new Filesystem;
-        
-        if (!$fs->exists($this->baseDir . '.git')) {
-            $gitInit = new Process('git init ' . $this->baseDir);
-            $gitInit->start();
-            $gitInit->wait();
+       if (!$this->fs->exists($this->baseDir . '.git')) {
+            $gitInit = $this->runCommand('git init ' . $this->baseDir);
             
             if (!$gitInit->isSuccessful()) {
-                echo $gitInit->getStopSignal();
                 throw new \RuntimeException('Tried to run "git init" but failed. Git said: ' . $gitInit->getOutput());
             }
         }
         
-        if (!$fs->exists($this->baseDir . '.gitignore')) {
-            $fs->copy(__DIR__ . '/../Resources/templates/.gitignore', $this->baseDir . '.gitignore', $force);
+        if (!$this->fs->exists($this->baseDir . '.gitignore')) {
+            $this->fs->copy(__DIR__ . '/../Resources/templates/.gitignore', $this->baseDir . '.gitignore', $force);
         }
     }
     
     public function getSuccessMessage()
     {
-        return '<info>Codebase appears to be tracked in git correctly.</info>';
+        return 'Codebase appears to be tracked in git correctly.';
     }
     
-    public function get12FactorLink()
+    public function getInfoLink()
     {
         return 'http://12factor.net/codebase';
     }

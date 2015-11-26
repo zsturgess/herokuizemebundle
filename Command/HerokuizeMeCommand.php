@@ -6,6 +6,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use ZacSturgess\HerokuizeMeBundle\Actor;
 
 /**
  * HerokuizeMeCommand
@@ -20,42 +21,52 @@ class HerokuizeMeCommand extends Command
             ->setName('herokuize:me')
             ->setDescription('')
             ->addOption(
-               'force',
-               'f',
-               InputOption::VALUE_NONE,
-               'If set, the task will overwrite files with the same name if they exist already'
-            )
-            ->addOption(
                'auto-fix',
                'a',
                InputOption::VALUE_NONE,
                'If set, the task will attempt to auto-fix any issues it finds'
             )
         ;
+    }
+    
+    protected function initialize(InputInterface $input, OutputInterface $output) {
+        // @todo: I think symfony runs this even when I do something like --help.
+        // Making this into a private called by execute() by get better performance.
+        $baseDir = $this->getApplication()->getKernel()->getRootDir() . '/../';
         
         $this->actors = [
-            "CodebaseActor"
+            new Actor\CodebaseActor($baseDir),
+            new Actor\DependanciesActor($baseDir),
+            new Actor\ConfigActor($baseDir),
+            new Actor\BackingServicesActor($baseDir),
+            new Actor\BuildReleaseRunActor($baseDir),
+            new Actor\ProcessesActor($baseDir),
+            new Actor\LogActor($baseDir),
+            new Actor\AdminTaskActor($baseDir),
         ];
     }
     
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        foreach ($this->actors as $actorName) {
+        foreach ($this->actors as $actor) {
             $output->writeln('');
-            
-            $actor = $this->getActorByName($actorName);
-            $output->writeln('Testing against ' . $actor->get12FactorLink());
+            $output->writeln('Testing against ' . $actor->getInfoLink());
             
             $result = $actor->run();
             
             if ($result === true) {
-                $output->writeln('  ' . $actor->getSuccessMessage());
+                $output->writeln('  <info>' . $actor->getSuccessMessage() . '</info>');
             } else {
                 $output->writeln('  ' . $result);
                 
                 if ($input->getOption('auto-fix')) {
-                    $actor->fix($input->getOption('force'));
-                    $output->writeln('  <info>Auto-fix applied.</info>');
+                    $return = $actor->fix();
+                    
+                    if (empty($return)) {
+                        $output->writeln('  <info>Auto-fix applied.</info>');
+                    } else {
+                        $output->writeln('  ' . $return);
+                    }
                 }
             }
         }
@@ -68,11 +79,5 @@ class HerokuizeMeCommand extends Command
         } else {
             $output->writeln('<info>Auto-fixes applied.</info> <comment>Check the changes made by running</comment> git diff <comment>then commit them by running</comment>  git commit -am\'Herokuize Me\'');
         }
-    }
-    
-    private function getActorByName($actorName) {
-        $actor = 'ZacSturgess\\HerokuizeMeBundle\\Actor\\' . $actorName;
-        
-        return new $actor();
     }
 }
