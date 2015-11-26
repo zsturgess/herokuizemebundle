@@ -2,7 +2,7 @@
 
 namespace ZacSturgess\HerokuizeMeBundle\Actor;
 
-use Symfony\Component\Process\ExecutableFinder;
+use ZacSturgess\HerokuizeMeBundle\Helper\ComposerFinder;
 
 /**
  * DependanciesActor
@@ -108,27 +108,11 @@ class DependenciesActor extends BaseActor
     }
     
     private function findComposer() {
-        if ($this->composerPath !== null) {
-            return $this->composerPath;
+        if ($this->composerPath === null) {
+            $this->composerPath = ComposerFinder::find();
         }
         
-        $composer = new ExecutableFinder;
-        $this->composerPath = $composer->find('composer');
-        
-        if ($this->composerPath !== null) {
-            return $this->composerPath;
-        }
-        
-        $this->composerPath = $composer->find('composer.phar', null, [
-            $this->baseDir,
-            $this->baseDir . '/bin/'
-        ]);
-        
-        if ($this->composerPath !== null) {
-            return $this->composerPath;
-        }
-        
-        throw new \RuntimeException('Cannot find a local installation of composer. Please ensure that composer is in your $PATH, or there is a composer.phar at the root of the symfony installation.');
+        return $this->composerPath;
     }
     
     private function checkForExtensionUse($ext) {

@@ -4,6 +4,8 @@ namespace ZacSturgess\HerokuizeMeBundle\Actor;
 
 /**
  * ConfigActor
+ * @todo the fix here is incorrect. Incenteev can stay, we need to check for a .php
+ * containing getenv() as an import and if not copy our template env_parameters.php
  */
 class ConfigActor extends BaseActor
 {

@@ -2,28 +2,101 @@
 
 namespace ZacSturgess\HerokuizeMeBundle\Actor;
 
+use Symfony\Component\Yaml\Parser;
+use ZacSturgess\HerokuizeMeBundle\Helper\ComposerFinder;
+
 /**
  * BackingServicesActor
  */
 class BackingServicesActor extends BaseActor
 {
-    public function run()
-    {   
-        // @todo: Check DB, Emails, etc. declares config via parameters
+    const DB_CONFIG_KEYS = ['driver', 'host', 'port', 'dbname', 'user', 'password'];
+    const EMAIL_CONFIG_KEYS = ['transport', 'host', 'username', 'password'];
+    
+    protected $parser;
+    protected $config;
+
+    public function __construct($baseDir)
+    {
+        $this->parser = new Parser;
+        
+        parent::__construct($baseDir);
+    }
+    
+    public function run($fix = false)
+    {
+        if ($this->config === null) {
+            $this->config = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config.yml'));
+        }
+        
+        foreach (self::DB_CONFIG_KEYS as $key) {
+            if (!$this->isParameterized($this->config['doctrine']['dbal'][$key])) {
+                if ($fix === true) {
+                    $this->fixConfig('database_' . $key, $this->config['doctrine']['dbal'][$key]);
+                } else {
+                    return '<error>Backing services are hard-coded, not parameterized.</error> The config value for doctrine.dbal.' . $key . ' is not a parameter, so could not be overriden by environment variable configuration.';
+                }
+            }
+        }
+        
+        foreach (self::EMAIL_CONFIG_KEYS as $key) {
+            if (!$this->isParameterized($this->config['swiftmailer'][$key])) {
+                if ($fix === true) {
+                    $this->fixConfig('mailer_' . $key, $this->config['swiftmailer'][$key]);
+                } else {
+                    return '<error>Backing services are hard-coded, not parameterized.</error> The config value for swiftmailer.' . $key . ' is not a parameter, so could not be overriden by environment variable configuration.';
+                }
+            }
+        }
+        
+        return true;
     }
     
     public function fix()
     {
-        // @todo: move any hardcoded config into parameters.yml.dist, replace config with parameter, run composer update
+        $this->run(true);
+        
+        // Now run composer script to populate parameters.yml with the values,
+        // so as not to break the local working copy
+        $composer = ComposerFinder::find();
+        $composerRun = $this->runCommand($composer . ' run-script post-update-cmd');
+            
+        if (!$composerRun->isSuccessful()) {
+            throw new \RuntimeException('Tried to run "composer run-script post-update-cmd" but failed. Composer said: ' . $composerRun->getOutput());
+        }
     }
     
     public function getSuccessMessage()
     {
-        return 'Project is set up to connect to backing services via configuration correctly.';
+        return 'Project is set up to connect to the database and email delivery as backing services via configuration correctly.';
     }
     
     public function getInfoLink()
     {
         return 'http://12factor.net/backing-services';
+    }
+    
+    private function isParameterized($configValue)
+    {
+        return (
+            (substr($configValue, 0, 1) === '%') && 
+            (substr($configValue, -1, 1) === '%')
+        );
+    }
+    
+    private function fixConfig($key, $value)
+    {
+        //Put the current value in parameters.yml.dist
+        file_put_contents(
+            $this->baseDir . 'app/config/parameters.yml.dist',
+            PHP_EOL . '    ' . str_pad($key, 19) . $value,
+            FILE_APPEND
+        );
+        
+        // Replace value in config.yml with %key%
+        file_put_contents(
+            $this->baseDir . 'app/config/config.yml',
+            str_replace(' ' . $value, " %$key%", file_get_contents($this->baseDir . 'app/config/config.yml'))
+        );
     }
 }
