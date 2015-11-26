@@ -9,12 +9,38 @@ class ProcessesActor extends BaseActor
 {
     public function run()
     {   
-        // @todo: Check session config is not for local files
+        // Check session config is not for local files
+        $config = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config.yml'));
+        
+        if ($config['framework']['session']['handler_id'] === '~') {
+            return '<error>Symfony is configured to use the default session handler.</error> Sessions will be stored as files, which doesn\'t work on disposable servers like Heroku dynos.';
+        }
+        
+        return true;
     }
     
     public function fix()
     {
-        // @todo: Fix config
+        // Fix config.yml
+        file_put_contents(
+            $this->baseDir . 'app/config/config.yml',
+            preg_replace(
+                '/handler_id:.*~/',
+                'handler_id: session.handler.pdo',
+                file_get_contents($this->baseDir . 'app/config/config.yml')
+            )
+        );
+        
+        // Add service definition
+        if (!$this->fs->exists($this->baseDir . 'app/config/services.yml')) {
+            file_put_contents($this->baseDir . 'app/config/services.yml', 'services:');
+        }
+        
+        file_put_contents(
+            $this->baseDir . 'app/config/services.yml',
+            file_get_contents($this->templateDir . 'pdo_sessions.yml'),
+            FILE_APPEND
+        );
     }
     
     public function getSuccessMessage()
