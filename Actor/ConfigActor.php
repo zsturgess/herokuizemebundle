@@ -9,36 +9,47 @@ namespace ZacSturgess\HerokuizeMeBundle\Actor;
  */
 class ConfigActor extends BaseActor
 {
-    const PARAM_BUILDER_SCRIPT_NAME = 'Incenteev\\ParameterHandler\\ScriptHandler::buildParameters';
-    
     public function run()
     {   
-        if (!$this->fs->exists($this->baseDir . 'composer.json')) {
-            return true;
+        $haveSeenParameters = false;
+        $config = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config.yml'));
+        
+        foreach ($config['imports'] as $import) {
+            if ($haveSeenParameters === false) {
+                if ($import['resource'] === 'parameters.yml') {
+                    $haveSeenParameters = true;
+                }
+                
+                continue;
+            }
+            
+            if (substr($import['resource'], -4) === '.php') {
+                $importFilename = $this->baseDir . 'app/config/' . $import['resource'];
+                
+                if (strpos(file_get_contents($importFilename), 'getenv(')) {
+                    return true;
+                }
+            }
         }
         
-        $composerJson = json_decode(file_get_contents($this->baseDir . 'composer.json'));
-        
-        if (in_array(self::PARAM_BUILDER_SCRIPT_NAME, $composerJson->scripts->post-install-cmd)) {
-            return '<error>Composer is set up to override environment variables.</error> A composer install is currently set up to build the parameters.yml file from the template parameters.yml.dist file, which will override any environment variables you set.';
-        } else {
+        if ($haveSeenParameters === false) {
             return true;
+        } else {
+            return '<error>Symfony is configured to ignore environment variables.</error> No PHP script that makes a call to getenv() was imported after parameters.yml, so no parameters will be configurable via environment variables.';
         }
     }
     
     public function fix()
     {
-        if (!$this->fs->exists($this->baseDir . 'composer.json')) {
-            return;
-        }
+        $this->fs->copy($this->templateDir . 'env_parameters.php', $this->baseDir . 'app/config/env_parameters.php');
         
-        $composerJson = json_decode(file_get_contents($this->baseDir . 'composer.json'));
-        $parameterBuilder = array_search(self::PARAM_BUILDER_SCRIPT_NAME, $composerJson->scripts->post-install-cmd);
+        $config = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config.yml'));
+        $config['imports'][] = ['resource' => 'env_parameters.php'];
         
-        if ($parameterBuilder !== false) {
-            unset($composerJson->scripts->{post-install-cmd}[$parameterBuilder]);
-            file_put_contents($this->baseDir . 'composer.json', json_encode($composerJson, JSON_PRETTY_PRINT));
-        }
+        file_put_contents(
+            $this->baseDir . 'app/config/config.yml',
+            $dumper->dump($config, 4)
+        );
     }
     
     public function getSuccessMessage()

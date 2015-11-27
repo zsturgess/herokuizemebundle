@@ -30,7 +30,7 @@ class CodebaseActor extends BaseActor
         }
         
         if (!$this->fs->exists($this->baseDir . '.gitignore')) {
-            $this->fs->copy(__DIR__ . '/../Resources/templates/.gitignore', $this->baseDir . '.gitignore', $force);
+            $this->fs->copy($this->templateDir . '.gitignore', $this->baseDir . '.gitignore');
         }
     }
     
