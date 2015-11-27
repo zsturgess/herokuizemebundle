@@ -11,7 +11,7 @@ class LogActor extends BaseActor
 {
     public function run()
     {   
-        // @todo: Check logs go to stderr at least in prod mode
+        // Check logs go to stderr
         $prodConfig = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config_prod.yml'));
         
         $correctHandlers = 0;

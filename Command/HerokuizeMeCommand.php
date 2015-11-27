@@ -30,8 +30,6 @@ class HerokuizeMeCommand extends Command
     }
     
     protected function initialize(InputInterface $input, OutputInterface $output) {
-        // @todo: I think symfony runs this even when I do something like --help.
-        // Making this into a private called by execute() by get better performance.
         $baseDir = $this->getApplication()->getKernel()->getRootDir() . '/../';
         
         $this->actors = [
