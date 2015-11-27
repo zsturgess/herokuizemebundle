@@ -12,7 +12,7 @@ class ProcessesActor extends BaseActor
         // Check session config is not for local files
         $config = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config.yml'));
         
-        if ($config['framework']['session']['handler_id'] === '~') {
+        if ($config['framework']['session']['handler_id'] === null) {
             return '<error>Symfony is configured to use the default session handler.</error> Sessions will be stored as files, which doesn\'t work on disposable servers like Heroku dynos.';
         }
         
@@ -28,6 +28,16 @@ class ProcessesActor extends BaseActor
                 '/handler_id:.*~/',
                 'handler_id: session.handler.pdo',
                 file_get_contents($this->baseDir . 'app/config/config.yml')
+            )
+        );
+        
+        // Fix parameters.yml
+        file_put_contents(
+            $this->baseDir . 'app/config/parameters.yml',
+            preg_replace(
+                '/^(\s+database_port:\s+)[^0-9]+/m',
+                '${1}3306',
+                file_get_contents($this->baseDir . 'app/config/parameters.yml')
             )
         );
         

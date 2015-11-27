@@ -70,11 +70,13 @@ class DependenciesActor extends BaseActor
                     (strstr($line, 'composer.json') !== false) ||
                     (strstr($line, 'composer.lock') !== false)
                 ) {
-                    unset($file[$lineNumber]);
+                    unset($gitIgnore[$lineNumber]);
+                } else {
+                    $gitIgnore[$lineNumber] = trim($line);
                 }
             }
             
-            file_put_contents($this->baseDir . '.gitignore', implode(PHP_EOL, $file));
+            file_put_contents($this->baseDir . '.gitignore', implode(PHP_EOL, $gitIgnore));
             
             $gitIgnore = file_get_contents($this->baseDir . '.gitignore');
             if (strstr($gitIgnore, 'vendor') === false) {
@@ -89,7 +91,7 @@ class DependenciesActor extends BaseActor
                 return '<error>Implicit dependancies on extensions cannot be checked on Windows.</error> Please see https://devcenter.heroku.com/articles/php-support#extensions';
             }
             
-            $composerRequire = $this->runCommand($this->findComposer() . ' require ext-' . $dependencyExtension . ':*');
+            $composerRequire = $this->runCommand($this->findComposer() . ' require ext-' . $dependencyExtension . ':* -n');
             
             if (!$composerRequire->isSuccessful()) {
                 throw new \RuntimeException('Tried to require ext-' . $dependencyExtension . '. Composer said: ' . $composerRequire->getOutput());
@@ -127,16 +129,21 @@ class DependenciesActor extends BaseActor
             return true;
         }
         
+        //These exts are recommended for Symfony, so always claim usage.
+        if (in_array($ext, ['intl', 'mbstring'])) {
+            return true;
+        }
+        
         $funcs = get_extension_funcs($ext);
         foreach ($funcs as $func) {
             $process = $this->runCommand(sprintf(
-                'grep -ri "%s(" %ssrc %svendor | wc -l',
+                'grep -ri "%s(" %ssrc %svendor --exclude-dir={symfony,sensio,swiftmailer,twig} | wc -l',
                 $func,
                 $this->baseDir,
                 $this->baseDir
             ));
             
-            if ($process->getOutput() !== "0") {
+            if (substr($process->getOutput(), 0, 1) !== "0") {
                 return true;
             }
         }

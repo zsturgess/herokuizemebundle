@@ -2,7 +2,6 @@
 
 namespace ZacSturgess\HerokuizeMeBundle\Actor;
 
-use Symfony\Component\Yaml\Parser;
 use ZacSturgess\HerokuizeMeBundle\Helper\ComposerFinder;
 
 /**
@@ -10,18 +9,10 @@ use ZacSturgess\HerokuizeMeBundle\Helper\ComposerFinder;
  */
 class BackingServicesActor extends BaseActor
 {
-    const DB_CONFIG_KEYS = ['driver', 'host', 'port', 'dbname', 'user', 'password'];
-    const EMAIL_CONFIG_KEYS = ['transport', 'host', 'username', 'password'];
+    private $dbConfigKeys = ['driver', 'host', 'port', 'dbname', 'user', 'password'];
+    private $emailConfigKeys = ['transport', 'host', 'username', 'password'];
     
-    protected $parser;
     protected $config;
-
-    public function __construct($baseDir)
-    {
-        $this->parser = new Parser;
-        
-        parent::__construct($baseDir);
-    }
     
     public function run($fix = false)
     {
@@ -29,7 +20,7 @@ class BackingServicesActor extends BaseActor
             $this->config = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config.yml'));
         }
         
-        foreach (self::DB_CONFIG_KEYS as $key) {
+        foreach ($this->dbConfigKeys as $key) {
             if (!$this->isParameterized($this->config['doctrine']['dbal'][$key])) {
                 if ($fix === true) {
                     $this->fixConfig('database_' . $key, $this->config['doctrine']['dbal'][$key]);
@@ -39,7 +30,7 @@ class BackingServicesActor extends BaseActor
             }
         }
         
-        foreach (self::EMAIL_CONFIG_KEYS as $key) {
+        foreach ($this->emailConfigKeys as $key) {
             if (!$this->isParameterized($this->config['swiftmailer'][$key])) {
                 if ($fix === true) {
                     $this->fixConfig('mailer_' . $key, $this->config['swiftmailer'][$key]);
@@ -89,7 +80,7 @@ class BackingServicesActor extends BaseActor
         //Put the current value in parameters.yml.dist
         file_put_contents(
             $this->baseDir . 'app/config/parameters.yml.dist',
-            PHP_EOL . '    ' . str_pad($key, 19) . $value,
+            PHP_EOL . '    ' . str_pad($key . ':', 19) . $value,
             FILE_APPEND
         );
         

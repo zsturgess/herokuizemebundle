@@ -4,6 +4,7 @@ namespace ZacSturgess\HerokuizeMeBundle\Actor;
 
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
+use Symfony\Component\Yaml\Parser;
 
 /**
  * BaseActor
@@ -13,12 +14,14 @@ abstract class BaseActor
     protected $baseDir;
     protected $templateDir;
     protected $fs;
+    protected $parser;
     
     public function __construct($baseDir)
     {
         $this->baseDir = $baseDir;
         $this->templateDir = __DIR__ . '/../Resources/templates/';
         $this->fs = new Filesystem;
+        $this->parser = new Parser;
     }
     
     /**

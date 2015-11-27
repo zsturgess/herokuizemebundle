@@ -2,6 +2,8 @@
 
 namespace ZacSturgess\HerokuizeMeBundle\Actor;
 
+use Symfony\Component\Yaml\Dumper;
+
 /**
  * ConfigActor
  */
@@ -39,6 +41,8 @@ class ConfigActor extends BaseActor
     
     public function fix()
     {
+        $dumper = new Dumper;
+        
         $this->fs->copy($this->templateDir . 'env_parameters.php', $this->baseDir . 'app/config/env_parameters.php');
         
         $config = $this->parser->parse(file_get_contents($this->baseDir . 'app/config/config.yml'));
