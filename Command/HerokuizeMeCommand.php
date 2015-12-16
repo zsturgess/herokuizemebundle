@@ -4,78 +4,119 @@ namespace ZacSturgess\HerokuizeMeBundle\Command;
 
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use ZacSturgess\HerokuizeMeBundle\Actor;
+use Symfony\Component\Process\ProcessBuilder;
+use ZacSturgess\HerokuizeMeBundle\Helper\ComposerFinder;
+use ZacSturgess\HerokuizeMeBundle\Helper\ExtensionDependancyHelper;
 
 /**
  * HerokuizeMeCommand
  */
 class HerokuizeMeCommand extends Command
 {
-    private $actors;
+    private $changesMade = false;
     
     protected function configure()
     {
         $this
             ->setName('herokuize:me')
-            ->setDescription('')
-            ->addOption(
-               'auto-fix',
-               'a',
-               InputOption::VALUE_NONE,
-               'If set, the task will attempt to auto-fix any issues it finds'
-            )
+            ->setDescription('Installs the deployment hook and scans for implicit dependancies on PHP extensions')
         ;
-    }
-    
-    protected function initialize(InputInterface $input, OutputInterface $output) {
-        $baseDir = $this->getApplication()->getKernel()->getRootDir() . '/../';
-        
-        $this->actors = [
-            new Actor\CodebaseActor($baseDir),
-            new Actor\DependenciesActor($baseDir),
-            new Actor\ConfigActor($baseDir),
-            new Actor\BackingServicesActor($baseDir),
-            new Actor\BuildReleaseRunActor($baseDir),
-            new Actor\ProcessesActor($baseDir),
-            new Actor\LogActor($baseDir),
-            new Actor\AdminTaskActor($baseDir),
-        ];
     }
     
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        foreach ($this->actors as $actor) {
-            $output->writeln('');
-            $output->writeln('Testing against ' . $actor->getInfoLink());
-            
-            $result = $actor->run();
-            
-            if ($result === true) {
-                $output->writeln('  <info>' . $actor->getSuccessMessage() . '</info>');
-            } else {
-                $output->writeln('  ' . $result);
-                
-                if ($input->getOption('auto-fix')) {
-                    $return = $actor->fix();
-                    
-                    if (empty($return)) {
-                        $output->writeln('  <info>Auto-fix applied.</info>');
-                    } else {
-                        $output->writeln('  ' . $return);
-                    }
-                }
-            }
+        $output->writeln('<comment>Installing deploy hook...</comment>');
+        $this->installHook($output);
+        $output->writeln('<info>OK</info>');
+        
+        $output->writeln('<comment>Scanning for implicit dependancies on PHP extensions...</comment>');
+        $this->scanDependancies($output);
+        $output->writeln('<info>OK</info>');
+        
+        $output->writeln('<info>Task complete.</info>');
+        if ($this->changesMade) {
+            $output->writeln('<comment>Don\'t forget to commit any changes to your composer.json and composer.lock files before pushing to Heroku.</comment>');
+        }
+    }
+    
+    private function installHook(OutputInterface $output)
+    {
+        $composerJson = json_decode(file_get_contents('composer.json'));
+        
+        if (!isset($composerJson->scripts)) {
+            $composerJson->scripts = new \stdClass;
         }
         
-        $output->writeln('');
-        $output->writeln('Task complete.');
+        if (!isset($composerJson->scripts->{'post-install-cmd'})) {
+            $composerJson->scripts->{'post-install-cmd'} = [];
+        }
         
-        if (!$input->getOption('auto-fix')) {
-            $output->writeln('<comment>No auto-fixes have been applied. Run again with</comment> -a <comment>or</comment> --auto-fix <comment>to apply patches.</comment>');
-        } else {
-            $output->writeln('<info>Auto-fixes applied.</info> <comment>Check the changes made by running</comment> git diff <comment>then commit them by running</comment>  git commit -am\'Herokuize Me\'');
+        if (in_array('ZacSturgess\HerokuizeMeBundle\ScriptHandler::herokuCompiler', $composerJson->scripts->{'post-install-cmd'})) {
+            return;
+        }
+        
+        $composerJson->scripts->{'post-install-cmd'}[] = 'ZacSturgess\HerokuizeMeBundle\ScriptHandler::herokuCompiler';
+        
+        file_put_contents(
+            'composer.json',
+            str_replace(
+                '"_empty_"',
+                '""',
+                json_encode(
+                    $composerJson,
+                    JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES
+                )
+            )
+        );
+        
+        $this->changesMade = true;
+    }
+    
+    private function scanDependancies(OutputInterface $output)
+    {
+        $helper = new ExtensionDependancyHelper();
+        $exts = $helper->checkExtensions();
+        
+        if (count($exts) > 0) {
+            $output->writeln('<error>Found implicit dependancies on PHP extensions.</error> Fixing... ');
+            
+            foreach ($exts as $ext) {
+                $output->write(' > Declaring dependancy on the <comment>' . $ext . '</comment> extension');
+                
+                $this->requireExtension($ext);
+            }
+            
+            $this->changesMade = true;
+        } else if (extension_loaded('mbstring')) {
+            $output->writeln('The mbstring extension is loaded locally, but not explicitly used or required by your application. Symfony performance can be improved with the mbstring extension, so it will be added as an explicit dependancy such that it is loaded on Heroku.');
+            
+            try {
+                $this->requireExtension('mbstring');
+            } catch (\RuntimeException $ex) {
+                $output->writeln('<comment>Failed to declare dependancy on mbstring. Your application should run fine without it, so you can ignore this.</comment>');
+                $output->writeln('Caused by: ' . $ex->getMessage());
+            }
+            
+            $this->changesMade = true;
+        }
+    }
+    
+    private function requireExtension($ext) {
+        $builder = new ProcessBuilder([
+            ComposerFinder::find(),
+            'require',
+            'ext-' . $ext,
+            '*',
+            '--no-interaction'
+        ]);
+
+        $process = $builder->getProcess();
+        $process->run();
+        $process->wait();
+
+        if (!$process->isSuccessful()) {
+            throw new \RuntimeException($process->getCommandLine() . ' failed to run. Composer said: ' . $process->getOutput());
         }
     }
 }

@@ -2,9 +2,9 @@
 
 ## Step 1: Download HerokuizeMeBundle with composer
 
-Require the bundle as a dev dependency with composer: 
+Require the bundle as a dependency with composer: 
 
-`$ composer require zsturgess/herokuizemebundle --dev`
+`$ composer require zsturgess/herokuizemebundle`
 
 ## Step 2: Enable the bundle
 
@@ -27,16 +27,14 @@ Enable the bundle in the dev section of the Symfony kernel:
 
 ## Step 3: Run the herokuize:me command
 
-The bundle provides a single command, `herokuize:me` that can check a Symfony project for problems that might stop it from running on heroku:
+The bundle provides a single command, `herokuize:me` that can be used to complete the rest of the setup:
 
 `$ php app/console herokuize:me`
 
-You can pass `--auto-fix` to have the bundle attempt to fix these problems automatically for you:
+The command will install the deploy hook that will auto-detect when the project is being pushed to heroku and make some configuration changes in order to make it run smoothly on production, as well as run an initial sense-check for implicit, undeclared dependencies on PHP extensions.
 
-`$ php app/console herokuize:me --auto-fix`
+## Step 4: Commit any changes and push to Heroku
 
-**Warning:** The `--auto-fix` mode of the command can be destructive. It is highly recommended that you commit the state of your working copy before running the command in this mode so that, should the auto fixers cause more problems than they solve, the changes they made can be easily reset.
+The `herokuize:me` command may prompt you to commit changes to your project's `composer.json` and `composer.lock` files. If so, commit these before making any other changes.
 
-## Next Steps
-
-If you're not sure what to do once you've run through the installation, take a look at our [next steps](nextsteps.md) for help on getting up and running on Heroku.
+Finally, your project should be ready to push to Heroku. When Heroku builds your app, HeokuizeMeBundle will make extra changes to the Symfony configuration of your project that only make sense on Heroku (for example: redirecting Symfony logs to event streams)

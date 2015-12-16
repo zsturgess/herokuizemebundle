@@ -8,11 +8,7 @@ HerokuizeMeBundle is a creation of Zac Sturgess. See also the [list of contribut
 
 ## Installation
 
-Installation is a [painless 3-step process](Resources/docs/installation.md), and comprises of installing the bundle, getting Symfony to load it, then running the provided HerokuizeMe command.
-
-### Next Steps
-
-If you're not sure what to do once you've run through the installation, take a look at our [next steps](Resources/docs/nextsteps.md) for help on getting up and running on Heroku.
+Installation is a [painless process](Resources/docs/installation.md).
 
 ## License
 
