@@ -15,6 +15,10 @@ class ScriptHandler {
             return;
         }
         
+        if (self::checkForLock()) {
+            return;
+        }
+        
         $event->getIO()->write('Heroku deploy detected');
         
         if (getenv('SYMFONY_ENV') === 'prod') {
@@ -34,6 +38,12 @@ class ScriptHandler {
     
     public static function herokuDevCompiler(Event $event)
     {
+        $event->getIO()->write('');
+        $event->getIO()->write('! WARNING');
+        $event->getIO()->write('   Symfony applications in dev mode are often subject to poor performance on Heroku.');
+        $event->getIO()->write('   It\'s recommended that you run \'heroku config:set SYMFONY_ENV=prod\' locally.');
+        $event->getIO()->write('');
+        
         self::installDevDependancies($event);
         self::rewriteHtaccess($event);
         self::herokuProdCompiler($event);
@@ -47,7 +57,7 @@ class ScriptHandler {
         }
         
         $event->getIO()->write('-----> Configuring Symfony to read parameters from config vars...');
-        unlink('app/config/parameters.yml');
+        file_put_contents('app/config/parameters.yml', '');
     }
     
     public static function logRewriter(Event $event)
@@ -95,7 +105,7 @@ class ScriptHandler {
             'app/config/config.yml',
             preg_replace(
                 '/^(\s+)handler_id:(\s+)~/m',
-                '\$1handler_id:\$2session.handler.pdo',
+                '$1handler_id:$2session.handler.pdo',
                 file_get_contents('app/config/config.yml')
             )
         );
@@ -140,6 +150,7 @@ class ScriptHandler {
         ]);
         
         $process = $builder->getProcess();
+        $process->setTimeout(60 * 60);
         $process->run();
         $process->wait();
         
@@ -166,5 +177,26 @@ class ScriptHandler {
                 $content
             )
         );
+    }
+    
+    private static function checkForLock() {
+        $lockFile = self::determineCacheDir() . 'herokuize.lock';
+        
+        if (file_exists($lockFile)) {
+            return true;
+        }
+        
+        file_put_contents($lockFile, time());
+        return false;
+    }
+    
+    private static function determineCacheDir() {
+        if (is_dir('app/cache')) {
+            return 'app/cache/';
+        } else if (is_dir('var/cache')) {
+            return 'var/cache/';
+        } else {
+            throw new \RuntimeException('Could not find the Symfony cache directory in app/ or var/');
+        }
     }
 }
