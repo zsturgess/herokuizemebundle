@@ -38,3 +38,5 @@ The command will install the deploy hook that will auto-detect when the project 
 The `herokuize:me` command may prompt you to commit changes to your project's `composer.json` and `composer.lock` files. If so, commit these before making any other changes.
 
 Finally, your project should be ready to push to Heroku. When Heroku builds your app, HeokuizeMeBundle will make extra changes to the Symfony configuration of your project that only make sense on Heroku (for example: redirecting Symfony logs to event streams)
+
+To set parameters, you need to set config variables prefixed with `SYMFONY__`. For example, to set the `database_host` parameter you'll need to set the `SYMFONY__DATABASE_HOST` config variable. You'll also need to set an additional `SYMFONY_ENV` config variable set to `dev` or `prod`.
