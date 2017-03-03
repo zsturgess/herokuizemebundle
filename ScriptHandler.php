@@ -21,7 +21,7 @@ class ScriptHandler {
         
         $event->getIO()->write('Heroku deploy detected');
         
-        if (getenv('SYMFONY_ENV') === 'prod') {
+        if (getenv('SYMFONY_ENV') === 'prod' || getenv('SYMFONY__ENV') === 'prod') {
             return self::herokuProdCompiler($event);
         } else {
             return self::herokuDevCompiler($event);
@@ -52,11 +52,20 @@ class ScriptHandler {
     public static function parameterRemover(Event $event)
     {
         // We must remove parameters.yml created by Incenteev to allow Symfony to pick up env vars.
-        if (!file_exists('app/config/parameters.yml')) {
-            return;
-        }
         
         $event->getIO()->write('-----> Configuring Symfony to read parameters from config vars...');
+
+        foreach (glob("app/config/*.yml") as $filename) {
+            file_put_contents(
+                $filename,
+                str_replace(
+                    '- { resource: parameters.yml }',
+                    '',
+                    file_get_contents($filename)
+                )
+            );
+        }
+
         file_put_contents('app/config/parameters.yml', '');
     }
     

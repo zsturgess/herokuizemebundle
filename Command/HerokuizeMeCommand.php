@@ -56,14 +56,7 @@ class HerokuizeMeCommand extends Command
             return;
         }
         
-        $position = array_search('Incenteev\\ParameterHandler\\ScriptHandler::buildParameters', $composerJson->scripts->{'post-install-cmd'});
-        
-        if ($position === false) {
-            array_unshift($composerJson->scripts->{'post-install-cmd'}, 'ZacSturgess\HerokuizeMeBundle\ScriptHandler::herokuCompiler');
-        } else {
-            array_splice($composerJson->scripts->{'post-install-cmd'}, $position + 1, 0, 'ZacSturgess\HerokuizeMeBundle\ScriptHandler::herokuCompiler');
-        }
-        
+        array_unshift($composerJson->scripts->{'post-install-cmd'}, 'ZacSturgess\HerokuizeMeBundle\ScriptHandler::herokuCompiler');
         
         file_put_contents(
             'composer.json',
