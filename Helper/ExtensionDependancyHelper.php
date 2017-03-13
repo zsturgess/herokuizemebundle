@@ -11,6 +11,10 @@ class ExtensionDependancyHelper {
     private function checkForExtensionUse($ext) {
         $funcs = get_extension_funcs($ext);
         
+        if (!is_array($funcs)) {
+            return false;
+        }
+        
         foreach ($funcs as $func) {
             $process = $this->runCommand(sprintf(
                 'grep -ri "%s(" src | wc -l',
