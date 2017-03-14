@@ -155,7 +155,8 @@ class ScriptHandler {
             '--dev',
             '--prefer-dist',
             '--optimize-autoloader',
-            '--no-interaction'
+            '--no-interaction',
+            '--no-scripts'
         ]);
         
         $process = $builder->getProcess();
