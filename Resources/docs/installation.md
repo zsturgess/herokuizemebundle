@@ -29,7 +29,7 @@ Enable the bundle in the dev section of the Symfony kernel:
 
 The bundle provides a single command, `herokuize:me` that can be used to complete the rest of the setup:
 
-`$ php app/console herokuize:me`
+`$ php bin/console herokuize:me`
 
 The command will install the deploy hook that will auto-detect when the project is being pushed to heroku and make some configuration changes in order to make it run smoothly on production, as well as run an initial sense-check for implicit, undeclared dependencies on PHP extensions.
 
