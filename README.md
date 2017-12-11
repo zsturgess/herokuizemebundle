@@ -4,7 +4,7 @@ HerokuizeMeBundle is a quick and easy way to get a Symfony project up and runnin
 
 HerokuizeMeBundle is a creation of Zac Sturgess. See also the [list of contributors](https://github.com/zsturgess/herokuizemebundle/graphs/contributors).
 
-**Warning:** HerokuizeMeBundle is still in the process of being developed, and is unstable. You have been warned.
+**Warning:** HerokuizeMeBundle is abandonware and is no longer recieving regular updates. Most of this bundle's functionality has been replaced with the improved developer experience of Symfony since version 4.0.
 
 ## Installation
 
